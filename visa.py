@@ -184,7 +184,9 @@ def reschedule(date):
 def get_date():
     # Requesting to get the whole available dates
     session = driver.get_cookie("_yatri_session")["value"]
+    print("h1")
     script = JS_SCRIPT % (str(DATE_URL), session)
+    print("h2")
     content = driver.execute_script(script)
     return json.loads(content)
 
@@ -251,6 +253,7 @@ if __name__ == "__main__":
             print(msg)
             info_logger(LOG_FILE_NAME, msg)
             dates = get_date()
+            print("HERE!!")
             if not dates:
                 # Ban Situation
                 msg = f"List is empty, Probabely banned!\n\tSleep for {BAN_COOLDOWN_TIME} hours!\n"
@@ -290,8 +293,9 @@ if __name__ == "__main__":
                     print(msg)
                     info_logger(LOG_FILE_NAME, msg)
                     time.sleep(RETRY_WAIT_TIME)
-        except:
+        except Exception as e:
             # Exception Occured
+            print(e)
             msg = f"Break the loop after exception!\n"
             END_MSG_TITLE = "EXCEPTION"
             break
