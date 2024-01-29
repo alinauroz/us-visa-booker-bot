@@ -11,11 +11,13 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait as Wait
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+from datetime import datetime, timedelta
 
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
 from embassy import *
+from request_sender import send_event
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -24,12 +26,21 @@ config.read('config.ini')
 # Account and current appointment info from https://ais.usvisa-info.com
 USERNAME = config['PERSONAL_INFO']['USERNAME']
 PASSWORD = config['PERSONAL_INFO']['PASSWORD']
+
 # Find SCHEDULE_ID in re-schedule page link:
 # https://ais.usvisa-info.com/en-am/niv/schedule/{SCHEDULE_ID}/appointment
 SCHEDULE_ID = config['PERSONAL_INFO']['SCHEDULE_ID']
 # Target Period:
-PRIOD_START = config['PERSONAL_INFO']['PRIOD_START']
-PRIOD_END = config['PERSONAL_INFO']['PRIOD_END']
+if 'PERIOD_IN_DAYS' in config['PERSONAL_INFO']:
+    PERIOD_IN_DAYS = int(config['PERSONAL_INFO']['PERIOD_IN_DAYS'])
+    PRIOD_START = datetime.now().strftime('%Y-%m-%d')
+    PRIOD_END = (datetime.now() + timedelta(days=PERIOD_IN_DAYS)).strftime('%Y-%m-%d')
+else:
+    PRIOD_START = config['PERSONAL_INFO']['PRIOD_START']
+    PRIOD_END = config['PERSONAL_INFO']['PRIOD_END']
+
+
+
 # Embassy Section:
 YOUR_EMBASSY = config['PERSONAL_INFO']['YOUR_EMBASSY'] 
 EMBASSY = Embassies[YOUR_EMBASSY][0]
@@ -163,7 +174,7 @@ def reschedule(date):
         "Cookie": "_yatri_session=" + driver.get_cookie("_yatri_session")["value"]
     }
     data = {
-        "utf8": driver.find_element(by=By.NAME, value='utf8').get_attribute('value'),
+        #"utf8": driver.find_element(by=By.NAME, value='utf8').get_attribute('value'),
         "authenticity_token": driver.find_element(by=By.NAME, value='authenticity_token').get_attribute('value'),
         "confirmed_limit_message": driver.find_element(by=By.NAME, value='confirmed_limit_message').get_attribute('value'),
         "use_consulate_appointment_capacity": driver.find_element(by=By.NAME, value='use_consulate_appointment_capacity').get_attribute('value'),
@@ -175,6 +186,7 @@ def reschedule(date):
     if(r.text.find('Successfully Scheduled') != -1):
         title = "SUCCESS"
         msg = f"Rescheduled Successfully! {date} {time}"
+        send_event("RESHEDULED", USERNAME)
     else:
         title = "FAIL"
         msg = f"Reschedule Failed!!! {date} {time}"
@@ -237,64 +249,63 @@ else:
 
 if __name__ == "__main__":
     first_loop = True
-    while 1:
-        LOG_FILE_NAME = "log_" + str(datetime.now().date()) + ".txt"
-        if first_loop:
-            t0 = time.time()
-            total_time = 0
-            Req_count = 0
-            start_process()
-            first_loop = False
-        Req_count += 1
-        try:
-            msg = "-" * 60 + f"\nRequest count: {Req_count}, Log time: {datetime.today()}\n"
+    LOG_FILE_NAME = "log_" + str(datetime.now().date()) + ".txt"
+    if first_loop:
+        t0 = time.time()
+        total_time = 0
+        Req_count = 0
+        start_process()
+        first_loop = False
+    Req_count += 1
+    try:
+        msg = "-" * 60 + f"\nRequest count: {Req_count}, Log time: {datetime.today()}\n"
+        print(msg)
+        info_logger(LOG_FILE_NAME, msg)
+        dates = get_date()
+        if not dates:
+            # Ban Situation
+            msg = f"List is empty, Probabely banned!\n\tSleep for {BAN_COOLDOWN_TIME} hours!\n"
             print(msg)
             info_logger(LOG_FILE_NAME, msg)
-            dates = get_date()
-            if not dates:
-                # Ban Situation
-                msg = f"List is empty, Probabely banned!\n\tSleep for {BAN_COOLDOWN_TIME} hours!\n"
-                print(msg)
-                info_logger(LOG_FILE_NAME, msg)
-                send_notification("BAN", msg)
+            send_notification("BAN", msg)
+            driver.get(SIGN_OUT_LINK)
+            time.sleep(BAN_COOLDOWN_TIME * hour)
+            first_loop = True
+        else:
+            # Print Available dates:
+            msg = ""
+            for d in dates:
+                msg = msg + "%s" % (d.get('date')) + ", "
+            send_event("DATES", msg)
+            msg = "Available dates:\n"+ msg
+            print(msg)
+            info_logger(LOG_FILE_NAME, msg)
+            date = get_available_date(dates)
+            if date:
+                # A good date to schedule for
+                END_MSG_TITLE, msg = reschedule(date)
+            RETRY_WAIT_TIME = random.randint(RETRY_TIME_L_BOUND, RETRY_TIME_U_BOUND)
+            t1 = time.time()
+            total_time = t1 - t0
+            msg = "\nWorking Time:  ~ {:.2f} minutes".format(total_time/minute)
+            print(msg)
+            info_logger(LOG_FILE_NAME, msg)
+            if total_time > WORK_LIMIT_TIME * hour:
+                # Let program rest a little
+                send_notification("REST", f"Break-time after {WORK_LIMIT_TIME} hours | Repeated {Req_count} times")
                 driver.get(SIGN_OUT_LINK)
-                time.sleep(BAN_COOLDOWN_TIME * hour)
+                time.sleep(WORK_COOLDOWN_TIME * hour)
                 first_loop = True
             else:
-                # Print Available dates:
-                msg = ""
-                for d in dates:
-                    msg = msg + "%s" % (d.get('date')) + ", "
-                msg = "Available dates:\n"+ msg
+                msg = "Retry Wait Time: "+ str(RETRY_WAIT_TIME)+ " seconds"
                 print(msg)
                 info_logger(LOG_FILE_NAME, msg)
-                date = get_available_date(dates)
-                if date:
-                    # A good date to schedule for
-                    END_MSG_TITLE, msg = reschedule(date)
-                    break
-                RETRY_WAIT_TIME = random.randint(RETRY_TIME_L_BOUND, RETRY_TIME_U_BOUND)
-                t1 = time.time()
-                total_time = t1 - t0
-                msg = "\nWorking Time:  ~ {:.2f} minutes".format(total_time/minute)
-                print(msg)
-                info_logger(LOG_FILE_NAME, msg)
-                if total_time > WORK_LIMIT_TIME * hour:
-                    # Let program rest a little
-                    send_notification("REST", f"Break-time after {WORK_LIMIT_TIME} hours | Repeated {Req_count} times")
-                    driver.get(SIGN_OUT_LINK)
-                    time.sleep(WORK_COOLDOWN_TIME * hour)
-                    first_loop = True
-                else:
-                    msg = "Retry Wait Time: "+ str(RETRY_WAIT_TIME)+ " seconds"
-                    print(msg)
-                    info_logger(LOG_FILE_NAME, msg)
-                    time.sleep(RETRY_WAIT_TIME)
-        except:
-            # Exception Occured
-            msg = f"Break the loop after exception!\n"
-            END_MSG_TITLE = "EXCEPTION"
-            break
+                time.sleep(RETRY_WAIT_TIME)
+    except Exception as e:
+        print(e)
+        # Exception Occured
+        msg = f"Break the loop after exception!\n"
+        END_MSG_TITLE = "EXCEPTION"
 
 print(msg)
 info_logger(LOG_FILE_NAME, msg)
