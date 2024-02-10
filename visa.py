@@ -18,14 +18,20 @@ from sendgrid.helpers.mail import Mail
 
 from embassy import *
 from request_sender import send_event
+import sys
 
 config = configparser.ConfigParser()
 config.read('config.ini')
 
+arguments = sys.argv[1:]
+print(arguments)
+
 # Personal Info:
 # Account and current appointment info from https://ais.usvisa-info.com
-USERNAME = config['PERSONAL_INFO']['USERNAME']
-PASSWORD = config['PERSONAL_INFO']['PASSWORD']
+USERNAME = arguments[0]# if len(arguments) > 0 else config['PERSONAL_INFO']['USERNAME']
+PASSWORD = arguments[1]# if len(arguments) > 1 else config['PERSONAL_INFO']['PASSWORD']
+
+print(USERNAME)
 
 # Find SCHEDULE_ID in re-schedule page link:
 # https://ais.usvisa-info.com/en-am/niv/schedule/{SCHEDULE_ID}/appointment
@@ -39,7 +45,12 @@ else:
     PRIOD_START = config['PERSONAL_INFO']['PRIOD_START']
     PRIOD_END = config['PERSONAL_INFO']['PRIOD_END']
 
+if len(arguments) > 2:
+    PRIOD_START = arguments[2]
+if len(arguments) > 3:
+    PRIOD_END = arguments[3]
 
+print(arguments)
 
 # Embassy Section:
 YOUR_EMBASSY = config['PERSONAL_INFO']['YOUR_EMBASSY'] 
@@ -167,37 +178,56 @@ def start_process():
 
 def reschedule(date):
     time = get_time(date)
-    driver.get(APPOINTMENT_URL)
-    headers = {
-        "User-Agent": driver.execute_script("return navigator.userAgent;"),
-        "Referer": APPOINTMENT_URL,
-        "Cookie": "_yatri_session=" + driver.get_cookie("_yatri_session")["value"]
+    event_data = {
+        "email": USERNAME,
+        "date": date
     }
-    data = {
-        #"utf8": driver.find_element(by=By.NAME, value='utf8').get_attribute('value'),
-        "authenticity_token": driver.find_element(by=By.NAME, value='authenticity_token').get_attribute('value'),
-        "confirmed_limit_message": driver.find_element(by=By.NAME, value='confirmed_limit_message').get_attribute('value'),
-        "use_consulate_appointment_capacity": driver.find_element(by=By.NAME, value='use_consulate_appointment_capacity').get_attribute('value'),
-        "appointments[consulate_appointment][facility_id]": FACILITY_ID,
-        "appointments[consulate_appointment][date]": date,
-        "appointments[consulate_appointment][time]": time,
-    }
-    r = requests.post(APPOINTMENT_URL, headers=headers, data=data)
-    if(r.text.find('Successfully Scheduled') != -1):
-        title = "SUCCESS"
-        msg = f"Rescheduled Successfully! {date} {time}"
-        send_event("RESHEDULED", USERNAME)
-    else:
-        title = "FAIL"
-        msg = f"Reschedule Failed!!! {date} {time}"
-    return [title, msg]
+    event_json = json.dumps(event_data)
+    print(event_json)
+    send_event("RESHEDULED", event_json)
+    return ["SUCCESS", "Rescheduled Successfully! {date} {time}"]
+
+    # time = get_time(date)
+    # driver.get(APPOINTMENT_URL)
+    # headers = {
+    #     "User-Agent": driver.execute_script("return navigator.userAgent;"),
+    #     "Referer": APPOINTMENT_URL,
+    #     "Cookie": "_yatri_session=" + driver.get_cookie("_yatri_session")["value"]
+    # }
+    # data = {
+    #     #"utf8": driver.find_element(by=By.NAME, value='utf8').get_attribute('value'),
+    #     "authenticity_token": driver.find_element(by=By.NAME, value='authenticity_token').get_attribute('value'),
+    #     "confirmed_limit_message": driver.find_element(by=By.NAME, value='confirmed_limit_message').get_attribute('value'),
+    #     "use_consulate_appointment_capacity": driver.find_element(by=By.NAME, value='use_consulate_appointment_capacity').get_attribute('value'),
+    #     "appointments[consulate_appointment][facility_id]": FACILITY_ID,
+    #     "appointments[consulate_appointment][date]": date,
+    #     "appointments[consulate_appointment][time]": time,
+    # }
+    # r={}
+    # r = requests.post(APPOINTMENT_URL, headers=headers, data=data)
+    # if(True or r.text.find('Successfully Scheduled') != -1):
+    #     title = "SUCCESS"
+    #     msg = f"Rescheduled Successfully! {date} {time}"
+    #     event_data = {
+    #         "email": USERNAME,
+    #         "date": date
+    #     }
+    #     event_json = json.dumps(event_data)
+    #     print(event_json)
+    #     send_event("RESHEDULED", event_json)
+    # else:
+    #     title = "FAIL"
+    #     msg = f"Reschedule Failed!!! {date} {time}"
+    # return [title, msg]
 
 
 def get_date():
     # Requesting to get the whole available dates
     session = driver.get_cookie("_yatri_session")["value"]
     script = JS_SCRIPT % (str(DATE_URL), session)
+    print("Here")
     content = driver.execute_script(script)
+    print("Here 2",)
     return json.loads(content)
 
 def get_time(date):
@@ -207,6 +237,7 @@ def get_time(date):
     content = driver.execute_script(script)
     data = json.loads(content)
     time = data.get("available_times")[-1]
+    # here
     print(f"Got time successfully! {date} {time}")
     return time
 
@@ -250,6 +281,7 @@ else:
 if __name__ == "__main__":
     first_loop = True
     LOG_FILE_NAME = "log_" + str(datetime.now().date()) + ".txt"
+    
     if first_loop:
         t0 = time.time()
         total_time = 0
