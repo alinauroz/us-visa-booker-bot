@@ -19,7 +19,7 @@ from sendgrid.helpers.mail import Mail
 from embassy import *
 from request_sender import send_event
 import sys
-import asyncio
+import threading
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -278,8 +278,8 @@ if LOCAL_USE:
 else:
     driver = webdriver.Remote(command_executor=HUB_ADDRESS, options=webdriver.ChromeOptions())
 
-async def exit_script():
-    await asyncio.sleep(180)
+def exit_script():
+    time.sleep(180)
     driver.quit()
     sys.exit()
 
@@ -288,8 +288,11 @@ if __name__ == "__main__":
     first_loop = True
     LOG_FILE_NAME = "log_" + str(datetime.now().date()) + ".txt"
 
-    asyncio.run(exit_script())
+    # Exit
+    thread = threading.Thread(target=exit_script)
+    thread.start()
     
+    print("ok...")
     if first_loop:
         t0 = time.time()
         total_time = 0
