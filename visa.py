@@ -279,8 +279,8 @@ if LOCAL_USE:
     chrome_options.add_argument("--disable-gpu")  # applicable to windows os only
     chrome_options.add_argument("--disable-dev-shm-usage")  # overcome limited resource problems
     chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--user-data-dir=./")
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    chrome_options.add_argument("--user-data-dir=/root/temp")
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     time.sleep(2)
 else:
     driver = webdriver.Remote(command_executor=HUB_ADDRESS, options=webdriver.ChromeOptions())
