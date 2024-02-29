@@ -32,8 +32,6 @@ print(arguments)
 USERNAME = arguments[0]# if len(arguments) > 0 else config['PERSONAL_INFO']['USERNAME']
 PASSWORD = arguments[1]# if len(arguments) > 1 else config['PERSONAL_INFO']['PASSWORD']
 
-print(USERNAME)
-
 # Find SCHEDULE_ID in re-schedule page link:
 # https://ais.usvisa-info.com/en-am/niv/schedule/{SCHEDULE_ID}/appointment
 SCHEDULE_ID = config['PERSONAL_INFO']['SCHEDULE_ID']
@@ -274,7 +272,15 @@ def info_logger(file_path, log):
 
 
 if LOCAL_USE:
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument("start-maximized")  # open Browser in maximized mode
+    chrome_options.add_argument("disable-infobars")  # disabling infobars
+    chrome_options.add_argument("--disable-extensions")  # disabling extensions
+    chrome_options.add_argument("--disable-gpu")  # applicable to windows os only
+    chrome_options.add_argument("--disable-dev-shm-usage")  # overcome limited resource problems
+    chrome_options.add_argument("--no-sandbox")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 else:
     driver = webdriver.Remote(command_executor=HUB_ADDRESS, options=webdriver.ChromeOptions())
 
