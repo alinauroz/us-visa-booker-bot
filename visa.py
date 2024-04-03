@@ -224,9 +224,7 @@ def get_date():
     # Requesting to get the whole available dates
     session = driver.get_cookie("_yatri_session")["value"]
     script = JS_SCRIPT % (str(DATE_URL), session)
-    print("Here")
     content = driver.execute_script(script)
-    print("Here 2",)
     return json.loads(content)
 
 def get_time(date):
