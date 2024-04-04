@@ -25,16 +25,13 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 
 arguments = sys.argv[1:]
-print(arguments)
 
 # Personal Info:
 # Account and current appointment info from https://ais.usvisa-info.com
-USERNAME = arguments[0]# if len(arguments) > 0 else config['PERSONAL_INFO']['USERNAME']
-PASSWORD = arguments[1]# if len(arguments) > 1 else config['PERSONAL_INFO']['PASSWORD']
+USERNAME = arguments[0]     # if len(arguments) > 0 else config['PERSONAL_INFO']['USERNAME']
+PASSWORD = arguments[1]     # if len(arguments) > 1 else config['PERSONAL_INFO']['PASSWORD']
+SCHEDULE_ID = arguments[4]  # config['PERSONAL_INFO']['SCHEDULE_ID']
 
-# Find SCHEDULE_ID in re-schedule page link:
-# https://ais.usvisa-info.com/en-am/niv/schedule/{SCHEDULE_ID}/appointment
-SCHEDULE_ID = config['PERSONAL_INFO']['SCHEDULE_ID']
 # Target Period:
 if 'PERIOD_IN_DAYS' in config['PERSONAL_INFO']:
     PERIOD_IN_DAYS = int(config['PERSONAL_INFO']['PERIOD_IN_DAYS'])
