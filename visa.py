@@ -101,7 +101,7 @@ JS_SCRIPT = ("var req = new XMLHttpRequest();"
              "return req.responseText;")
 
 def send_notification(title, msg):
-    print(f"Sending notification!")
+    print(f"Sending notification!", title, msg)
     if SENDGRID_API_KEY:
         message = Mail(from_email=USERNAME, to_emails=USERNAME, subject=msg, html_content=msg)
         try:
@@ -173,48 +173,51 @@ def start_process():
     print("\n\tlogin successful!\n")
 
 def reschedule(date):
-    time = get_time(date)
-    event_data = {
-        "email": USERNAME,
-        "date": date
-    }
-    event_json = json.dumps(event_data)
-    print(event_json)
-    send_event("RESHEDULED", event_json)
-    return ["SUCCESS", "Rescheduled Successfully! {date} {time}"]
+    #time = get_time(date)
+    #event_data = {
+    #    "email": USERNAME,
+    #    "date": date,
+    #    "scheduleId": SCHEDULE_ID,
+    #}
+    #event_json = json.dumps(event_data)
+    # print(event_json)
+    # send_event("RESHEDULED", event_json)
+    # return ["SUCCESS", "Rescheduled Successfully! {date} {time}"]
 
-    # time = get_time(date)
-    # driver.get(APPOINTMENT_URL)
-    # headers = {
-    #     "User-Agent": driver.execute_script("return navigator.userAgent;"),
-    #     "Referer": APPOINTMENT_URL,
-    #     "Cookie": "_yatri_session=" + driver.get_cookie("_yatri_session")["value"]
-    # }
-    # data = {
-    #     #"utf8": driver.find_element(by=By.NAME, value='utf8').get_attribute('value'),
-    #     "authenticity_token": driver.find_element(by=By.NAME, value='authenticity_token').get_attribute('value'),
-    #     "confirmed_limit_message": driver.find_element(by=By.NAME, value='confirmed_limit_message').get_attribute('value'),
-    #     "use_consulate_appointment_capacity": driver.find_element(by=By.NAME, value='use_consulate_appointment_capacity').get_attribute('value'),
-    #     "appointments[consulate_appointment][facility_id]": FACILITY_ID,
-    #     "appointments[consulate_appointment][date]": date,
-    #     "appointments[consulate_appointment][time]": time,
-    # }
-    # r={}
-    # r = requests.post(APPOINTMENT_URL, headers=headers, data=data)
-    # if(True or r.text.find('Successfully Scheduled') != -1):
-    #     title = "SUCCESS"
-    #     msg = f"Rescheduled Successfully! {date} {time}"
-    #     event_data = {
-    #         "email": USERNAME,
-    #         "date": date
-    #     }
-    #     event_json = json.dumps(event_data)
-    #     print(event_json)
-    #     send_event("RESHEDULED", event_json)
-    # else:
-    #     title = "FAIL"
-    #     msg = f"Reschedule Failed!!! {date} {time}"
-    # return [title, msg]
+    time = get_time(date)
+    driver.get(APPOINTMENT_URL)
+    headers = {
+        "User-Agent": driver.execute_script("return navigator.userAgent;"),
+        "Referer": APPOINTMENT_URL,
+        "Cookie": "_yatri_session=" + driver.get_cookie("_yatri_session")["value"]
+    }
+    data = {
+        #"utf8": driver.find_element(by=By.NAME, value='utf8').get_attribute('value'),
+        "authenticity_token": driver.find_element(by=By.NAME, value='authenticity_token').get_attribute('value'),
+        "confirmed_limit_message": driver.find_element(by=By.NAME, value='confirmed_limit_message').get_attribute('value'),
+        "use_consulate_appointment_capacity": driver.find_element(by=By.NAME, value='use_consulate_appointment_capacity').get_attribute('value'),
+        "appointments[consulate_appointment][facility_id]": FACILITY_ID,
+        "appointments[consulate_appointment][date]": date,
+        "appointments[consulate_appointment][time]": time,
+    }
+    r={}
+    r = requests.post(APPOINTMENT_URL, headers=headers, data=data)
+    if(True or r.text.find('Successfully Scheduled') != -1):
+        title = "SUCCESS"
+        msg = f"Rescheduled Successfully! {date} {time}"
+        event_data = {
+            "email": USERNAME,
+            "date": date,
+            "scheduleId": SCHEDULE_ID
+        }
+        event_json = json.dumps(event_data)
+        print(event_json)
+        send_event("RESHEDULED", event_json)
+    else:
+        title = "FAIL"
+        msg = f"Reschedule Failed!!! {date} {time}"
+        send_event("RESHEDULED_FAILED", event_json)
+    return [title, msg]
 
 
 def get_date():
@@ -276,7 +279,10 @@ if LOCAL_USE:
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--user-data-dir=/home/ezee/temp")
     chrome_options.add_argument("--remote-debugging-port=9222")
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()), 
+    #    options=chrome_options
+    )
     time.sleep(2)
 else:
     driver = webdriver.Remote(command_executor=HUB_ADDRESS, options=webdriver.ChromeOptions())
