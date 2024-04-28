@@ -281,7 +281,7 @@ if LOCAL_USE:
     chrome_options.add_argument("--remote-debugging-port=9222")
     driver = webdriver.Chrome(
         service=Service(ChromeDriverManager().install()), 
-    #    options=chrome_options
+        options=chrome_options
     )
     time.sleep(2)
 else:
