@@ -10,5 +10,6 @@ Embassies = {
     "en-ca-que": ["en-ca", 93, "Continue"], # English - Canada - Quebec City
     "en-ca-tor": ["en-ca", 94, "Continue"], # English - Canada - Toronto
     "en-ca-van": ["en-ca", 95, "Continue"], # English - Canada - Vancouver
-    "en-ae-abd": ["en-ae", 49, "Continue"]
+    "en-ae-abd": ["en-ae", 49, "Continue"],
+    "en-ae-dbu": ["en-ae", 50, "Continue"],
 }
