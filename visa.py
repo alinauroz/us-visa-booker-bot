@@ -337,9 +337,9 @@ if __name__ == "__main__":
             print(msg)
             info_logger(LOG_FILE_NAME, msg)
             date = get_available_date(dates)
-            if date:
-                # A good date to schedule for
-                END_MSG_TITLE, msg = reschedule(date)
+            #if date:
+            #    # A good date to schedule for
+            #    END_MSG_TITLE, msg = reschedule(date)
             RETRY_WAIT_TIME = random.randint(RETRY_TIME_L_BOUND, RETRY_TIME_U_BOUND)
             t1 = time.time()
             total_time = t1 - t0
